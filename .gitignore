@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+# Seeded checkpoints / manifests (large binaries; fetched or seeded, not committed)
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+uv.lock
+mlflow.db
+mlruns/
+# Dev-only seeding tool (internal; references training infra)
+scripts/seed_from_hf.py
