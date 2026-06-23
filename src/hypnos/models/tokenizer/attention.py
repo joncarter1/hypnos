@@ -2,4 +2,4 @@
 
 from hypnos.models.attention import IdentityAttention, RoPETransformer
 
-__all__ = ['IdentityAttention', 'RoPETransformer']
+__all__ = ["IdentityAttention", "RoPETransformer"]

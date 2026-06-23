@@ -2,4 +2,4 @@
 
 from .tokenizer import SignalTokenizer
 
-__all__ = ['SignalTokenizer']
+__all__ = ["SignalTokenizer"]

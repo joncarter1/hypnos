@@ -108,7 +108,7 @@ def _sample_from_logits(
     if top_k and top_k > 0:
         k = min(top_k, logits.size(-1))
         kth = logits.topk(k, dim=-1).values[..., -1, None]
-        logits = logits.masked_fill(logits < kth, float('-inf'))
+        logits = logits.masked_fill(logits < kth, float("-inf"))
 
     if 0.0 < top_p < 1.0:
         sorted_logits, sorted_idx = torch.sort(logits, descending=True, dim=-1)
@@ -117,8 +117,8 @@ def _sample_from_logits(
         # Keep the top token always; drop entries once cumulative prob (excluding
         # the current one) already exceeds top_p.
         remove = (cumprobs - probs) > top_p
-        sorted_logits = sorted_logits.masked_fill(remove, float('-inf'))
-        logits = torch.full_like(logits, float('-inf')).scatter(-1, sorted_idx, sorted_logits)
+        sorted_logits = sorted_logits.masked_fill(remove, float("-inf"))
+        logits = torch.full_like(logits, float("-inf")).scatter(-1, sorted_idx, sorted_logits)
 
     probs = logits.softmax(dim=-1)
     return torch.multinomial(probs, num_samples=1, generator=generator).squeeze(-1)
@@ -170,7 +170,7 @@ class SharedDepthTransformer(nn.Module):
     ):
         super().__init__()
         if not (0.0 <= mod_context_dropout_p < 1.0):
-            raise ValueError(f'mod_context_dropout_p must be in [0, 1), got {mod_context_dropout_p}')
+            raise ValueError(f"mod_context_dropout_p must be in [0, 1), got {mod_context_dropout_p}")
 
         self.modality_configs = modality_configs
         self._weight_group = weight_group
@@ -204,16 +204,18 @@ class SharedDepthTransformer(nn.Module):
         # Shared pos_embed sized for the longest modality's K.
         self.pos_embed = nn.Embedding(max_K, depth_dim)
 
-        self.layers = nn.ModuleList([
-            DepthTransformerLayer(
-                d_model=depth_dim,
-                nhead=num_heads,
-                dim_feedforward=dim_feedforward,
-                dropout=dropout,
-                swiglu=swiglu,
-            )
-            for _ in range(depth)
-        ])
+        self.layers = nn.ModuleList(
+            [
+                DepthTransformerLayer(
+                    d_model=depth_dim,
+                    nhead=num_heads,
+                    dim_feedforward=dim_feedforward,
+                    dropout=dropout,
+                    swiglu=swiglu,
+                )
+                for _ in range(depth)
+            ]
+        )
         self.norm = nn.LayerNorm(depth_dim)
 
         self.modality_embeddings = nn.Parameter(torch.randn(num_modalities, depth_dim) * 0.02)
@@ -256,12 +258,7 @@ class SharedDepthTransformer(nn.Module):
 
         # Replace mod_ctx with the learnable null at random (B, S) positions —
         # forces the model to lean on cls_context + modality embedding.
-        if (
-            self.training
-            and self.has_cls_context
-            and cls_context is not None
-            and self.mod_context_dropout_p > 0.0
-        ):
+        if self.training and self.has_cls_context and cls_context is not None and self.mod_context_dropout_p > 0.0:
             drop_mask = torch.bernoulli(
                 torch.full((B, S, 1), self.mod_context_dropout_p, device=mod_ctx.device, dtype=mod_ctx.dtype)
             ).bool()
@@ -284,8 +281,7 @@ class SharedDepthTransformer(nn.Module):
             N = depth_input.size(0)
             if N > chunk_size:
                 outputs = [
-                    gradient_checkpoint(self._run_layers, c, use_reentrant=False)
-                    for c in depth_input.split(chunk_size)
+                    gradient_checkpoint(self._run_layers, c, use_reentrant=False) for c in depth_input.split(chunk_size)
                 ]
                 x = torch.cat(outputs, dim=0)
             else:

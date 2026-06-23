@@ -148,15 +148,15 @@ class VectorQuantizer(nn.Module):
         self.embedding.weight.data.uniform_(-1.0 / codebook_size, 1.0 / codebook_size)
 
         # EMA tracking buffers
-        self.register_buffer('ema_cluster_size', torch.ones(codebook_size))
-        self.register_buffer('ema_embed_sum', torch.zeros(codebook_size, dim))
-        self.register_buffer('initialized', torch.tensor(False))
+        self.register_buffer("ema_cluster_size", torch.ones(codebook_size))
+        self.register_buffer("ema_embed_sum", torch.zeros(codebook_size, dim))
+        self.register_buffer("initialized", torch.tensor(False))
 
         # Raw assignment counts for unbiased marginal-entropy logging.
         # Unlike `ema_cluster_size`, these are not touched by dead-code resets,
         # so they reflect actual code usage frequency. Caller resets between
         # measurement windows (e.g. once per validation epoch).
-        self.register_buffer('usage_count', torch.zeros(codebook_size, dtype=torch.long))
+        self.register_buffer("usage_count", torch.zeros(codebook_size, dtype=torch.long))
 
         # Dead code check counter (not a buffer — resets on checkpoint load, which is fine)
         self._next_unused_check = check_unused_every
@@ -452,10 +452,14 @@ class ResidualVectorQuantizer(nn.Module):
 
         indices = torch.stack(all_indices, dim=-1)
 
-        return z_q, indices, {
-            'commitment_loss': total_commitment / n_q,
-            'residual_norm': residual.detach().norm(dim=-1).mean(),
-        }
+        return (
+            z_q,
+            indices,
+            {
+                "commitment_loss": total_commitment / n_q,
+                "residual_norm": residual.detach().norm(dim=-1).mean(),
+            },
+        )
 
     def encode(self, x: Tensor, num_quantizers: int | None = None) -> Tensor:
         """Encode to discrete indices only (for inference).
@@ -489,7 +493,13 @@ class ResidualVectorQuantizer(nn.Module):
         Returns:
             z_q: Quantized embeddings (B, T, D).
         """
-        z_q = torch.zeros(indices.shape[0], indices.shape[1], self.dim, device=indices.device, dtype=self.quantizers[0].embedding.weight.dtype)
+        z_q = torch.zeros(
+            indices.shape[0],
+            indices.shape[1],
+            self.dim,
+            device=indices.device,
+            dtype=self.quantizers[0].embedding.weight.dtype,
+        )
 
         for i in range(indices.shape[-1]):
             z_q = z_q + self.quantizers[i].decode(indices[..., i])
@@ -515,7 +525,7 @@ class ResidualVectorQuantizer(nn.Module):
             probs = cluster_size / cluster_size.sum()
             entropy = -(probs * probs.log()).sum()
             perplexity = entropy.exp()
-            stats[f'codebook_usage_q{i}'] = perplexity / q.codebook_size
+            stats[f"codebook_usage_q{i}"] = perplexity / q.codebook_size
         return stats
 
     def reset_marginal_stats(self) -> None:
@@ -540,7 +550,7 @@ class ResidualVectorQuantizer(nn.Module):
         for i, q in enumerate(self.quantizers):
             H = q.marginal_entropy()
             log_V = torch.log(torch.tensor(float(q.codebook_size), device=H.device))
-            stats[f'marginal_entropy_q{i}'] = H
-            stats[f'marginal_entropy_norm_q{i}'] = H / log_V
-            stats[f'effective_vocab_q{i}'] = H.exp() / q.codebook_size
+            stats[f"marginal_entropy_q{i}"] = H
+            stats[f"marginal_entropy_norm_q{i}"] = H / log_V
+            stats[f"effective_vocab_q{i}"] = H.exp() / q.codebook_size
         return stats

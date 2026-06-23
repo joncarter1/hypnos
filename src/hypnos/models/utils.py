@@ -63,8 +63,8 @@ class CausalInstanceNorm1d(nn.Module):
             self.weight = nn.Parameter(torch.ones(1, num_features, 1))
             self.bias = nn.Parameter(torch.zeros(1, num_features, 1))
         else:
-            self.register_parameter('weight', None)
-            self.register_parameter('bias', None)
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
 
     def forward(self, x: Tensor) -> Tensor:
         if self.window_size is None:
@@ -124,37 +124,37 @@ class CausalInstanceNorm1d(nn.Module):
 
 def get_activation(name: str, **kwargs):
     """Return an activation function from its name."""
-    if name == 'relu':
+    if name == "relu":
         return nn.ReLU(**kwargs)
-    elif name == 'leaky':
+    elif name == "leaky":
         return nn.LeakyReLU(**kwargs)
-    elif name == 'gelu':
+    elif name == "gelu":
         return nn.GELU(**kwargs)
-    elif name == 'elu':
+    elif name == "elu":
         return nn.ELU(**kwargs)
-    elif name == 'silu' or name == 'swish':
+    elif name == "silu" or name == "swish":
         return nn.SiLU(**kwargs)
-    elif name == 'linear':
+    elif name == "linear":
         return nn.Identity()
     else:
-        raise ValueError(f'{name=} is unsupported.')
+        raise ValueError(f"{name=} is unsupported.")
 
 
-def get_norm(name: str | None = 'batch', causal: bool = False, *args, **kwargs) -> nn.Module:
-    if name == 'batch':
+def get_norm(name: str | None = "batch", causal: bool = False, *args, **kwargs) -> nn.Module:
+    if name == "batch":
         return nn.BatchNorm1d(*args, **kwargs)
-    elif name == 'layer':
+    elif name == "layer":
         return ConvLayerNorm(*args, **kwargs)
-    elif name == 'rms':
+    elif name == "rms":
         return ConvRMSNorm(*args, **kwargs)
     elif name is None:
         return nn.Identity()
-    elif name == 'instance':  # and not causal:
+    elif name == "instance":  # and not causal:
         return nn.InstanceNorm1d(*args, **kwargs)
-    elif name == 'instance' and causal:  # IGNORE FOR NOW
+    elif name == "instance" and causal:  # IGNORE FOR NOW
         return CausalInstanceNorm1d(*args, **kwargs)
-    elif name.startswith('instance') and causal:
-        window_size = int(name.split('_')[-1])
+    elif name.startswith("instance") and causal:
+        window_size = int(name.split("_")[-1])
         return CausalInstanceNorm1d(*args, **kwargs, window_size=window_size)
     else:
-        raise ValueError(f'Normalisation with {name=} and {causal=} unknown.')
+        raise ValueError(f"Normalisation with {name=} and {causal=} unknown.")

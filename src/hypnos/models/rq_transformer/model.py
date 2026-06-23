@@ -31,7 +31,7 @@ class ModalityConfig:
     name: str
     num_quantizers: int
     codebook_size: int
-    signal_type: str = ''
+    signal_type: str = ""
 
 
 def _compute_per_level_loss(
@@ -110,7 +110,7 @@ def _compute_per_level_loss(
         if use_activation_checkpointing and h.requires_grad:
 
             def _level_loss(h, targets, _head=output_heads[k], _tw=token_weight, _nt=n_tokens):
-                loss = F.cross_entropy(_head(h), targets, reduction='none')
+                loss = F.cross_entropy(_head(h), targets, reduction="none")
                 if _tw is not None:
                     return (loss * _tw).sum() / _nt
                 return loss.mean()
@@ -120,7 +120,7 @@ def _compute_per_level_loss(
             # Metric-only second forward: combined loss/accuracy/per-sample reductions.
             with torch.no_grad():
                 logits = output_heads[k](h)
-                loss_full = F.cross_entropy(logits, targets, reduction='none')
+                loss_full = F.cross_entropy(logits, targets, reduction="none")
                 correct = (logits.argmax(dim=-1) == targets).float()
                 if token_weight is not None:
                     per_level_accuracy[k] = (correct * token_weight).sum() / n_tokens
@@ -132,7 +132,7 @@ def _compute_per_level_loss(
                 per_level_logz[k] = torch.logsumexp(logits, dim=-1).mean()
         else:
             logits = output_heads[k](h).reshape(-1, codebook_size)
-            loss = F.cross_entropy(logits, targets, reduction='none')
+            loss = F.cross_entropy(logits, targets, reduction="none")
             correct = (logits.argmax(dim=-1) == targets).float()
             if token_weight is not None:
                 per_level_loss[k] = (loss * token_weight).sum() / n_tokens
@@ -292,8 +292,8 @@ class MultiModalRQTransformer(nn.Module):
             missing = [mc.name for mc in modality_configs if not mc.signal_type]
             if missing:
                 raise ValueError(
-                    f'Setups with multiple modalities require non-empty signal_type on every ModalityConfig. '
-                    f'Missing signal_type for: {missing}'
+                    f"Setups with multiple modalities require non-empty signal_type on every ModalityConfig. "
+                    f"Missing signal_type for: {missing}"
                 )
 
         # Compute depth layout: flat mapping from token column index → (modality_name, quantizer_idx)
@@ -627,22 +627,22 @@ class MultiModalRQTransformer(nn.Module):
         # depth-conditioning signal only — in the additive fusion inside depth it
         # learns to occupy an orthogonal complement of mod_ctx's residual subspace,
         # so probing CLS alone sees a structurally partial view of the signal.
-        embeddings: dict[str, Tensor] = {'1s': temporal_context}  # (B, M, S, D)
+        embeddings: dict[str, Tensor] = {"1s": temporal_context}  # (B, M, S, D)
 
         return {
-            'loss': loss,
-            'per_level_loss': per_level_loss.detach(),
-            'per_level_accuracy': per_level_accuracy.detach(),
-            'per_level_logit_max': per_level_logit_max.detach(),
-            'per_level_logz': per_level_logz.detach(),
-            'per_modality_loss': {k: v.detach() for k, v in per_modality_loss.items()},
-            'per_modality_accuracy': {k: v.detach() for k, v in per_modality_accuracy.items()},
-            'per_modality_per_sample_loss': {k: v.detach() for k, v in per_modality_per_sample_loss.items()},
-            'per_modality_per_sample_correct': {k: v.detach() for k, v in per_modality_per_sample_correct.items()},
-            'per_modality_logit_max': {k: v.detach() for k, v in per_modality_logit_max.items()},
-            'per_modality_logz': {k: v.detach() for k, v in per_modality_logz.items()},
-            'temporal_context': temporal_context,
-            'embeddings': embeddings,
+            "loss": loss,
+            "per_level_loss": per_level_loss.detach(),
+            "per_level_accuracy": per_level_accuracy.detach(),
+            "per_level_logit_max": per_level_logit_max.detach(),
+            "per_level_logz": per_level_logz.detach(),
+            "per_modality_loss": {k: v.detach() for k, v in per_modality_loss.items()},
+            "per_modality_accuracy": {k: v.detach() for k, v in per_modality_accuracy.items()},
+            "per_modality_per_sample_loss": {k: v.detach() for k, v in per_modality_per_sample_loss.items()},
+            "per_modality_per_sample_correct": {k: v.detach() for k, v in per_modality_per_sample_correct.items()},
+            "per_modality_logit_max": {k: v.detach() for k, v in per_modality_logit_max.items()},
+            "per_modality_logz": {k: v.detach() for k, v in per_modality_logz.items()},
+            "temporal_context": temporal_context,
+            "embeddings": embeddings,
         }
 
     @torch.no_grad()

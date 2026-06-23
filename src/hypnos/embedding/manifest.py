@@ -74,45 +74,45 @@ def parse_config(config: dict) -> ModelMetadata:
     """Validate a bundle ``config`` dict and return :class:`ModelMetadata`."""
     modalities = [
         ModalitySpec(
-            name=m['name'],
-            signal_type=m['signal_type'],
-            channels=list(m['channels']),
-            tokenizer=m['tokenizer'],
-            num_quantizers=int(m['num_quantizers']),
-            codebook_size=int(m['codebook_size']),
-            token_duration_sec=float(m['token_duration_sec']),
-            sample_rate=int(m['sample_rate']),
-            preprocess_modality=m['preprocess_modality'],
+            name=m["name"],
+            signal_type=m["signal_type"],
+            channels=list(m["channels"]),
+            tokenizer=m["tokenizer"],
+            num_quantizers=int(m["num_quantizers"]),
+            codebook_size=int(m["codebook_size"]),
+            token_duration_sec=float(m["token_duration_sec"]),
+            sample_rate=int(m["sample_rate"]),
+            preprocess_modality=m["preprocess_modality"],
         )
-        for m in config['modalities']
+        for m in config["modalities"]
     ]
     if not modalities:
-        raise ValueError('bundle config has no modalities.')
+        raise ValueError("bundle config has no modalities.")
 
     # All modalities must share a single token cadence — the temporal model concatenates them
     # along time and averages across modalities, valid only at one token-per-interval cadence.
     durations = {round(m.token_duration_sec, 6) for m in modalities}
     if len(durations) != 1:
-        raise ValueError(f'All modalities must share token_duration_sec; got {sorted(durations)}.')
+        raise ValueError(f"All modalities must share token_duration_sec; got {sorted(durations)}.")
 
     tokenizers = {
         stem: TokenizerSpec(
-            signal_type=t['signal_type'],
-            num_quantizers=int(t['num_quantizers']),
-            codebook_size=int(t['codebook_size']),
-            token_duration_sec=float(t['token_duration_sec']),
-            sample_rate=int(t['sample_rate']),
-            tokenizer_kwargs=dict(t['tokenizer_kwargs']),
+            signal_type=t["signal_type"],
+            num_quantizers=int(t["num_quantizers"]),
+            codebook_size=int(t["codebook_size"]),
+            token_duration_sec=float(t["token_duration_sec"]),
+            sample_rate=int(t["sample_rate"]),
+            tokenizer_kwargs=dict(t["tokenizer_kwargs"]),
         )
-        for stem, t in config['tokenizers'].items()
+        for stem, t in config["tokenizers"].items()
     }
 
-    model_kwargs = dict(config['model_kwargs'])
-    if 'modality_configs' in model_kwargs:
-        raise ValueError('model_kwargs must NOT contain modality_configs (built from `modalities`).')
+    model_kwargs = dict(config["model_kwargs"])
+    if "modality_configs" in model_kwargs:
+        raise ValueError("model_kwargs must NOT contain modality_configs (built from `modalities`).")
 
     return ModelMetadata(
-        model_target=config['model_target'],
+        model_target=config["model_target"],
         model_kwargs=model_kwargs,
         modalities=modalities,
         tokenizers=tokenizers,

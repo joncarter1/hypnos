@@ -45,9 +45,10 @@ def gradient_checkpoint(fn, *args, **kwargs):
     not ``default_dtype``, which can otherwise cause a metadata mismatch in nested checkpoints
     that save dtype-dependent placeholder tensors).
     """
-    kwargs['use_reentrant'] = False
-    kwargs.setdefault('context_fn', _preserve_default_dtype_context_fn)
+    kwargs["use_reentrant"] = False
+    kwargs.setdefault("context_fn", _preserve_default_dtype_context_fn)
     return _raw_checkpoint(fn, *args, **kwargs)
+
 
 # ---------------------------------------------------------------------------
 # Compiled FlexAttention wrappers
@@ -63,7 +64,7 @@ _compiled_create_block_mask_accel = None
 
 
 def _compiled_flex_attention(query, key, value, **kwargs):
-    if query.device.type == 'cpu':
+    if query.device.type == "cpu":
         return flex_attention(query, key, value, **kwargs)
     global _compiled_flex_attention_accel
     if _compiled_flex_attention_accel is None:
@@ -72,13 +73,14 @@ def _compiled_flex_attention(query, key, value, **kwargs):
 
 
 def _compiled_create_block_mask(mask_fn, **kwargs):
-    device = kwargs.get('device')
-    if getattr(device, 'type', None) == 'cpu' or str(device) == 'cpu':
+    device = kwargs.get("device")
+    if getattr(device, "type", None) == "cpu" or str(device) == "cpu":
         return create_block_mask(mask_fn, **kwargs)
     global _compiled_create_block_mask_accel
     if _compiled_create_block_mask_accel is None:
         _compiled_create_block_mask_accel = torch.compile(create_block_mask)
     return _compiled_create_block_mask_accel(mask_fn, **kwargs)
+
 
 # ---------------------------------------------------------------------------
 # Rotary Position Embeddings (RoPE)
@@ -103,15 +105,15 @@ class RotaryEmbedding(nn.Module):
     def __init__(self, dim: int, max_seq_len: int = 8192, theta: float = 10000.0):
         super().__init__()
         freqs = 1.0 / (theta ** (torch.arange(0, dim, 2).float() / dim))
-        self.register_buffer('freqs', freqs)
+        self.register_buffer("freqs", freqs)
         self._build_cache(max_seq_len)
 
     def _build_cache(self, seq_len: int) -> None:
         """Build cos/sin caches up to the given sequence length."""
         t = torch.arange(seq_len, device=self.freqs.device)
         freqs_table = torch.outer(t, self.freqs)
-        self.register_buffer('cos_cached', freqs_table.cos())
-        self.register_buffer('sin_cached', freqs_table.sin())
+        self.register_buffer("cos_cached", freqs_table.cos())
+        self.register_buffer("sin_cached", freqs_table.sin())
 
     def forward(self, seq_len: int) -> tuple[Tensor, Tensor]:
         """Return cos and sin tables for the given sequence length.
@@ -210,9 +212,9 @@ def get_block_mask(
     """
     if mask_fn is None:
         return None
-    if cache.get('block_mask') is not None and cache.get('seq_len') == seq_len:
-        return cache['block_mask']
-    if getattr(device, 'type', None) == 'mps' or str(device) == 'mps':
+    if cache.get("block_mask") is not None and cache.get("seq_len") == seq_len:
+        return cache["block_mask"]
+    if getattr(device, "type", None) == "mps" or str(device) == "mps":
         mask = _dense_attention_mask(mask_fn, seq_len, device)
     else:
         mask = _compiled_create_block_mask(
@@ -223,8 +225,8 @@ def get_block_mask(
             KV_LEN=seq_len,
             device=device,
         )
-    cache['block_mask'] = mask
-    cache['seq_len'] = seq_len
+    cache["block_mask"] = mask
+    cache["seq_len"] = seq_len
     return mask
 
 
@@ -647,6 +649,7 @@ class RoPETransformer(nn.Module):
         is_causal = self.causal and self.window_size is None
 
         if self.use_activation_checkpointing:
+
             def run_layer(layer, x):
                 x, _ = layer(x, cos, sin, block_mask=block_mask, is_causal=is_causal)
                 return x

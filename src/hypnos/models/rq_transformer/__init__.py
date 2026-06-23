@@ -3,6 +3,6 @@
 from .model import ModalityConfig, MultiModalRQTransformer
 
 __all__ = [
-    'ModalityConfig',
-    'MultiModalRQTransformer',
+    "ModalityConfig",
+    "MultiModalRQTransformer",
 ]

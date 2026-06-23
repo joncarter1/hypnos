@@ -20,48 +20,96 @@ _logger = logging.getLogger(__name__)
 # Alternative EDF labels for each canonical channel, across datasets/conventions.
 ALT_COLUMNS = {
     ECG: (
-        'EKG', 'ECG1', 'ECG L', 'ECGL', 'ECG L-ECG R',
-        'ECG EKG2-EKG', 'EKG2-EKG', 'ECG LA-RA', 'LA-RA',
+        "EKG",
+        "ECG1",
+        "ECG L",
+        "ECGL",
+        "ECG L-ECG R",
+        "ECG EKG2-EKG",
+        "EKG2-EKG",
+        "ECG LA-RA",
+        "LA-RA",
     ),
     ABD: (
-        'Abdo', 'ABDO RES', 'ABDO EFFORT', 'Abdominal', 'ABDOMINAL', 'Abdomen', 'abdomen',
-        'Resp Abdominal', 'Resp Abdomen',
+        "Abdo",
+        "ABDO RES",
+        "ABDO EFFORT",
+        "Abdominal",
+        "ABDOMINAL",
+        "Abdomen",
+        "abdomen",
+        "Resp Abdominal",
+        "Resp Abdomen",
     ),
     THX: (
-        'Thor', 'THOR RES', 'THOR EFFORT', 'Thoracic', 'Thorax', 'Chest', 'thorax', 'CHEST',
-        'Resp Thoracic', 'Resp Chest',
+        "Thor",
+        "THOR RES",
+        "THOR EFFORT",
+        "Thoracic",
+        "Thorax",
+        "Chest",
+        "thorax",
+        "CHEST",
+        "Resp Thoracic",
+        "Resp Chest",
     ),
     # EEG channels (handle referencing conventions)
-    EEG_C3: ('C3-M2', 'C3-A2', 'C3_M2', 'C3_A2', 'EEG C3-M2', 'EEG C3-A2', 'EEG(sec) C3', 'EEG(sec)'),
-    EEG_C4: ('C4-M1', 'C4-A1', 'C4_M1', 'C4_A1', 'EEG C4-M1', 'EEG C4-A1', 'EEG(sec) C4', 'EEG', 'EEG3'),
+    EEG_C3: ("C3-M2", "C3-A2", "C3_M2", "C3_A2", "EEG C3-M2", "EEG C3-A2", "EEG(sec) C3", "EEG(sec)"),
+    EEG_C4: ("C4-M1", "C4-A1", "C4_M1", "C4_A1", "EEG C4-M1", "EEG C4-A1", "EEG(sec) C4", "EEG", "EEG3"),
     # EOG channels (E1/E2 AASM standard)
-    EOG_E1: ('E1-M2', 'E1-A2', 'EOG E1-M2', 'EOG(L)', 'LOC', 'EOG-L', 'EOGl', 'EOG LOC-M2', 'LOC-M2'),
+    EOG_E1: ("E1-M2", "E1-A2", "EOG E1-M2", "EOG(L)", "LOC", "EOG-L", "EOGl", "EOG LOC-M2", "LOC-M2"),
     EOG_E2: (
-        'E2-M1', 'E2-M2', 'E2-A1', 'EOG E2-M1', 'EOG(R)', 'ROC', 'EOG-R', 'EOGr',
-        'EOG ROC-M1', 'ROC-M1', 'EEG ROC-M1',
+        "E2-M1",
+        "E2-M2",
+        "E2-A1",
+        "EOG E2-M1",
+        "EOG(R)",
+        "ROC",
+        "EOG-R",
+        "EOGr",
+        "EOG ROC-M1",
+        "ROC-M1",
+        "EEG ROC-M1",
     ),
     # EMG chin
     EMG_CHIN: (
-        'Chin1-Chin2', 'CHIN1-CHIN2', 'CHIN', 'ChinA', 'Cchin', 'Chin EMG', 'EMG', 'EMG Chin', 'chin',
-        'EMG Chin1-Chin2', 'EMG CHIN1-CHIN2', 'EMG Chin2-Chin1', 'Chin2-Chin1', 'EEG Chin1-Chin2',
+        "Chin1-Chin2",
+        "CHIN1-CHIN2",
+        "CHIN",
+        "ChinA",
+        "Cchin",
+        "Chin EMG",
+        "EMG",
+        "EMG Chin",
+        "chin",
+        "EMG Chin1-Chin2",
+        "EMG CHIN1-CHIN2",
+        "EMG Chin2-Chin1",
+        "Chin2-Chin1",
+        "EEG Chin1-Chin2",
     ),
 }
 
 # Contralateral mastoid referencing (AASM): canonical channel -> required reference electrode.
-CONTRALATERAL_REF: dict[str, str] = {'C3': 'M2', 'C4': 'M1', 'E1': 'M2', 'E2': 'M1'}
+CONTRALATERAL_REF: dict[str, str] = {"C3": "M2", "C4": "M1", "E1": "M2", "E2": "M1"}
 
 # A1/A2 are legacy equivalents of M1/M2.
-REFERENCE_ALTS: dict[str, list[str]] = {'M1': ['A1'], 'M2': ['A2']}
+REFERENCE_ALTS: dict[str, list[str]] = {"M1": ["A1"], "M2": ["A2"]}
 _ALL_REF_NAMES: set[str] = set(REFERENCE_ALTS) | {a for alts in REFERENCE_ALTS.values() for a in alts}
 
 # Pre-computed bipolar labels (already derived in the EDF), checked before components.
-BIPOLAR_LABELS: dict[str, tuple[str, ...]] = {'Chin': ('Chin1-Chin2', 'CHIN1-CHIN2')}
+BIPOLAR_LABELS: dict[str, tuple[str, ...]] = {"Chin": ("Chin1-Chin2", "CHIN1-CHIN2")}
 
 # Component electrode pairs for computing bipolar derivations: (positive, negative).
 BIPOLAR_COMPONENTS: dict[str, list[tuple[str, str]]] = {
-    'Chin': [
-        ('ChinR', 'ChinL'), ('Chin1', 'Chin2'), ('cchin_r', 'cchin_l'),
-        ('R Chin', 'L Chin'), ('Rchin', 'Lchin'), ('EMG3', 'EMG2'), ('EMG2', 'EMG1'),
+    "Chin": [
+        ("ChinR", "ChinL"),
+        ("Chin1", "Chin2"),
+        ("cchin_r", "cchin_l"),
+        ("R Chin", "L Chin"),
+        ("Rchin", "Lchin"),
+        ("EMG3", "EMG2"),
+        ("EMG2", "EMG1"),
     ],
 }
 
@@ -100,12 +148,13 @@ def _find_reference_label(ref_name: str, available_labels: list[str]) -> str | N
 
 
 def _load_reference_signals(
-    f: pyedflib.EdfReader, label_to_idx: dict[str, int],
+    f: pyedflib.EdfReader,
+    label_to_idx: dict[str, int],
 ) -> dict[str, tuple[np.ndarray, int]]:
     """Load M1/M2 reference signals if available in the EDF."""
     available = list(label_to_idx.keys())
     refs: dict[str, tuple[np.ndarray, int]] = {}
-    for ref_name in ('M1', 'M2'):
+    for ref_name in ("M1", "M2"):
         label = _find_reference_label(ref_name, available)
         if label is not None:
             idx = label_to_idx[label]
@@ -196,9 +245,13 @@ def _resolve_one_channel(
                 signal = f.readSignal(idx)
                 fs, unit, pmin, pmax = _read_signal_metadata(f, idx)
                 return ResolvedChannel(
-                    signal=signal, sampling_rate=fs, unit=unit,
-                    physical_min=pmin, physical_max=pmax,
-                    method='bipolar_pre_computed', edf_labels=[label],
+                    signal=signal,
+                    sampling_rate=fs,
+                    unit=unit,
+                    physical_min=pmin,
+                    physical_max=pmax,
+                    method="bipolar_pre_computed",
+                    edf_labels=[label],
                 )
 
         # Try computing from component electrode pairs (e.g. ChinR - ChinL)
@@ -217,18 +270,22 @@ def _resolve_one_channel(
                 min_len = min(len(pos_signal), len(neg_signal))
                 bipolar = (pos_signal[:min_len] - neg_signal[:min_len]).astype(np.float64)
 
-                _logger.info(f'Computed bipolar derivation {pos_label}-{neg_label} for {ch_name}')
+                _logger.info(f"Computed bipolar derivation {pos_label}-{neg_label} for {ch_name}")
                 return ResolvedChannel(
-                    signal=bipolar, sampling_rate=pos_fs, unit=pos_unit,
-                    physical_min=pos_pmin, physical_max=pos_pmax,
-                    method='bipolar_derived', edf_labels=[pos_label, neg_label],
+                    signal=bipolar,
+                    sampling_rate=pos_fs,
+                    unit=pos_unit,
+                    physical_min=pos_pmin,
+                    physical_max=pos_pmax,
+                    method="bipolar_derived",
+                    edf_labels=[pos_label, neg_label],
                 )
         # Fall through to standard resolution (single electrode fallback)
 
     # --- Step 2: Standard name resolution ---
     actual_name = get_column_match(ch_name, available)
     if actual_name is None:
-        _logger.info(f'Channel {ch_name} not found in EDF')
+        _logger.info(f"Channel {ch_name} not found in EDF")
         return None
 
     idx = label_to_idx[actual_name]
@@ -238,9 +295,13 @@ def _resolve_one_channel(
     # --- Step 3: Check if already pre-referenced (e.g. 'C3-M2') ---
     if _is_pre_referenced(ch_name, actual_name):
         return ResolvedChannel(
-            signal=signal, sampling_rate=fs, unit=unit,
-            physical_min=pmin, physical_max=pmax,
-            method='pre_referenced', edf_labels=[actual_name],
+            signal=signal,
+            sampling_rate=fs,
+            unit=unit,
+            physical_min=pmin,
+            physical_max=pmax,
+            method="pre_referenced",
+            edf_labels=[actual_name],
         )
 
     # --- Step 4: Bare electrode needing contralateral reference ---
@@ -252,27 +313,39 @@ def _resolve_one_channel(
             min_len = min(len(signal), len(ref_resampled))
             signal = (signal[:min_len] - ref_resampled[:min_len]).astype(np.float64)
             return ResolvedChannel(
-                signal=signal, sampling_rate=fs, unit=unit,
-                physical_min=pmin, physical_max=pmax,
-                method='re_referenced', edf_labels=[actual_name],
+                signal=signal,
+                sampling_rate=fs,
+                unit=unit,
+                physical_min=pmin,
+                physical_max=pmax,
+                method="re_referenced",
+                edf_labels=[actual_name],
             )
         # No reference electrodes in EDF at all → hardware applied referencing
         if not ref_signals:
-            _logger.info(f'{ch_name}: no reference electrodes in EDF, assuming acquisition-referenced')
+            _logger.info(f"{ch_name}: no reference electrodes in EDF, assuming acquisition-referenced")
             return ResolvedChannel(
-                signal=signal, sampling_rate=fs, unit=unit,
-                physical_min=pmin, physical_max=pmax,
-                method='pre_referenced', edf_labels=[actual_name],
+                signal=signal,
+                sampling_rate=fs,
+                unit=unit,
+                physical_min=pmin,
+                physical_max=pmax,
+                method="pre_referenced",
+                edf_labels=[actual_name],
             )
         # Some refs exist but not the one we need → genuinely unreferenced
         if drop_unreferenced:
-            _logger.warning(f'{ch_name}: needs {ref_name} but only {set(ref_signals)} available, dropping')
+            _logger.warning(f"{ch_name}: needs {ref_name} but only {set(ref_signals)} available, dropping")
             return None
-        _logger.warning(f'{ch_name}: bare electrode without {ref_name} reference, using unreferenced')
+        _logger.warning(f"{ch_name}: bare electrode without {ref_name} reference, using unreferenced")
 
     # --- Step 5: No referencing needed (ECG, ABD, etc.) or unreferenced fallback ---
     return ResolvedChannel(
-        signal=signal, sampling_rate=fs, unit=unit,
-        physical_min=pmin, physical_max=pmax,
-        method='direct', edf_labels=[actual_name],
+        signal=signal,
+        sampling_rate=fs,
+        unit=unit,
+        physical_min=pmin,
+        physical_max=pmax,
+        method="direct",
+        edf_labels=[actual_name],
     )

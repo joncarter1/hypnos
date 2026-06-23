@@ -65,7 +65,7 @@ class SignalTokenizer(nn.Module):
         rotation_trick: Use rotation trick (Fifty et al., 2025) instead of STE for VQ gradients.
     """
 
-    VALID_MODES = ('discrete', 'vae')
+    VALID_MODES = ("discrete", "vae")
 
     def __init__(
         self,
@@ -80,7 +80,7 @@ class SignalTokenizer(nn.Module):
         n_residual_layers: int = 1,
         dilation_base: int = 1,
         # Mode
-        mode: str = 'discrete',
+        mode: str = "discrete",
         # Discrete (RVQ) parameters
         codebook_size: int = 512,
         codebook_dim: int | None = None,
@@ -100,11 +100,11 @@ class SignalTokenizer(nn.Module):
         # Causality
         causal: bool = False,
         # Architecture
-        activation: str = 'gelu',
-        norm: str | None = 'layer',
+        activation: str = "gelu",
+        norm: str | None = "layer",
         last_kernel_size: int = 7,
         stride_kernel_multiplier: int = 2,
-        pad_mode: str = 'reflect',
+        pad_mode: str = "reflect",
         # Memory optimization
         use_activation_checkpointing: bool = False,
         # VQ gradient method
@@ -113,7 +113,7 @@ class SignalTokenizer(nn.Module):
         super().__init__()
 
         if mode not in self.VALID_MODES:
-            raise ValueError(f'Invalid mode {mode!r}, must be one of {self.VALID_MODES}')
+            raise ValueError(f"Invalid mode {mode!r}, must be one of {self.VALID_MODES}")
 
         # Store configuration
         self.mode = mode
@@ -132,8 +132,8 @@ class SignalTokenizer(nn.Module):
 
         if hop_length != self.samples_per_token:
             raise ValueError(
-                f'Product of ratios ({hop_length}) must equal '
-                f'sample_rate * token_duration_sec ({self.samples_per_token})'
+                f"Product of ratios ({hop_length}) must equal "
+                f"sample_rate * token_duration_sec ({self.samples_per_token})"
             )
 
         # Encoder
@@ -169,7 +169,7 @@ class SignalTokenizer(nn.Module):
             self.encoder_transformer = IdentityAttention()
 
         # Mode-specific bottleneck
-        if mode == 'discrete':
+        if mode == "discrete":
             codebook_dim = codebook_dim if codebook_dim is not None else embed_dim
             self.codebook_dim = codebook_dim
             self.project_in = nn.Linear(embed_dim, codebook_dim)
@@ -250,7 +250,7 @@ class SignalTokenizer(nn.Module):
         z = self.encoder(x)
         z = self.encoder_transformer(z)
 
-        if self.mode == 'vae':
+        if self.mode == "vae":
             mu = self.fc_mu(z)
             return self._reparameterize(mu, self.fc_logvar(z))
 
@@ -271,7 +271,7 @@ class SignalTokenizer(nn.Module):
         Returns:
             Reconstructed signal (B, C, T).
         """
-        if self.mode == 'discrete':
+        if self.mode == "discrete":
             z = self.project_out(z)
         else:
             z = self.fc_decode(z)
@@ -288,7 +288,7 @@ class SignalTokenizer(nn.Module):
         Returns:
             Reconstructed signal (B, C, T).
         """
-        if self.mode != 'discrete':
+        if self.mode != "discrete":
             raise RuntimeError('decode_tokens() requires mode="discrete"')
         z_q = self.quantizer.decode(indices)
         return self.decode(z_q)
@@ -310,13 +310,13 @@ class SignalTokenizer(nn.Module):
         z = self.encoder(x)
         z = self.encoder_transformer(z)
 
-        if self.mode == 'discrete':
+        if self.mode == "discrete":
             z_proj = self.project_in(z)
 
             # Always quantize (EMA codebook updates + commitment loss on every batch)
             z_q, indices, vq_losses = self.quantizer(z_proj)
-            commitment_loss = vq_losses['commitment_loss']
-            residual_norm = vq_losses.get('residual_norm', zero)
+            commitment_loss = vq_losses["commitment_loss"]
+            residual_norm = vq_losses.get("residual_norm", zero)
 
             # Per-sequence quantization dropout (Défossez et al., 2024):
             # independently bypass VQ for each sequence in the batch
@@ -329,16 +329,16 @@ class SignalTokenizer(nn.Module):
             z_out = self.decoder_transformer(z_out)
             x_recon = self.decoder(z_out)
             assert x_recon.size(-1) == input_length, (
-                f'Decoder output length {x_recon.size(-1)} != input length {input_length}'
+                f"Decoder output length {x_recon.size(-1)} != input length {input_length}"
             )
 
             return {
-                'reconstruction': x_recon,
-                'embeddings': z_q,
-                'indices': indices,
-                'commitment_loss': commitment_loss,
-                'kl_loss': zero,
-                'residual_norm': residual_norm,
+                "reconstruction": x_recon,
+                "embeddings": z_q,
+                "indices": indices,
+                "commitment_loss": commitment_loss,
+                "kl_loss": zero,
+                "residual_norm": residual_norm,
             }
 
         # VAE mode
@@ -352,16 +352,16 @@ class SignalTokenizer(nn.Module):
         z_out = self.decoder_transformer(z_out)
         x_recon = self.decoder(z_out)
         assert x_recon.size(-1) == input_length, (
-            f'Decoder output length {x_recon.size(-1)} != input length {input_length}'
+            f"Decoder output length {x_recon.size(-1)} != input length {input_length}"
         )
 
         return {
-            'reconstruction': x_recon,
-            'embeddings': z_sampled,
-            'indices': None,
-            'commitment_loss': zero,
-            'kl_loss': kl_loss,
-            'residual_norm': zero,
+            "reconstruction": x_recon,
+            "embeddings": z_sampled,
+            "indices": None,
+            "commitment_loss": zero,
+            "kl_loss": kl_loss,
+            "residual_norm": zero,
         }
 
     def tokenize(self, x: Tensor) -> Tensor:
@@ -376,7 +376,7 @@ class SignalTokenizer(nn.Module):
         Raises:
             RuntimeError: If mode is not 'discrete'.
         """
-        if self.mode != 'discrete':
+        if self.mode != "discrete":
             raise RuntimeError('tokenize() requires mode="discrete"; use encode() for VAE embeddings')
         with torch.no_grad():
             return self.encode(x)
@@ -387,24 +387,24 @@ class SignalTokenizer(nn.Module):
 
     def get_codebook_usage(self) -> dict[str, Tensor]:
         """Get codebook usage statistics (discrete mode only)."""
-        if self.mode != 'discrete':
+        if self.mode != "discrete":
             return {}
         return self.quantizer.get_codebook_usage()
 
     def reset_marginal_stats(self) -> None:
         """Reset raw assignment counters before a measurement window."""
-        if self.mode != 'discrete':
+        if self.mode != "discrete":
             return
         self.quantizer.reset_marginal_stats()
 
     def get_marginal_stats(self) -> dict[str, Tensor]:
         """Per-quantizer marginal entropy stats from raw counts (discrete mode only)."""
-        if self.mode != 'discrete':
+        if self.mode != "discrete":
             return {}
         return self.quantizer.get_marginal_stats()
 
     @classmethod
-    def from_checkpoint(cls, checkpoint_path: str | Path, **kwargs) -> 'SignalTokenizer':
+    def from_checkpoint(cls, checkpoint_path: str | Path, **kwargs) -> "SignalTokenizer":
         """Load a SignalTokenizer from a training checkpoint.
 
         Constructs the model from the provided kwargs, then loads the tokenizer weights from
@@ -420,28 +420,28 @@ class SignalTokenizer(nn.Module):
         """
         model = cls(**kwargs)
         checkpoint_str = str(checkpoint_path)
-        if checkpoint_str.startswith('hf://') or checkpoint_str.startswith('s3://'):
+        if checkpoint_str.startswith("hf://") or checkpoint_str.startswith("s3://"):
             import fsspec
 
-            with fsspec.open(checkpoint_str, 'rb') as f:
-                checkpoint = torch.load(f, map_location='cpu', weights_only=False)
+            with fsspec.open(checkpoint_str, "rb") as f:
+                checkpoint = torch.load(f, map_location="cpu", weights_only=False)
         else:
-            checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+            checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
         # Extract model weights (strip 'model.' prefix from Lightning module state_dict,
         # and '_orig_mod.' prefix from torch.compile'd models)
         state_dict = {}
-        for key, value in checkpoint['state_dict'].items():
-            if not key.startswith('model.'):
+        for key, value in checkpoint["state_dict"].items():
+            if not key.startswith("model."):
                 continue
-            clean_key = key.removeprefix('model.').replace('_orig_mod.', '')
+            clean_key = key.removeprefix("model.").replace("_orig_mod.", "")
             state_dict[clean_key] = value
 
         missing, unexpected = model.load_state_dict(state_dict, strict=False)
         if missing:
-            logger.warning(f'Missing keys when loading checkpoint: {missing}')
+            logger.warning(f"Missing keys when loading checkpoint: {missing}")
         if unexpected:
-            logger.warning(f'Unexpected keys when loading checkpoint: {unexpected}')
+            logger.warning(f"Unexpected keys when loading checkpoint: {unexpected}")
 
         model.eval()
         return model

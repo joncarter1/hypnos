@@ -62,11 +62,15 @@ def _temporal_only_forward(
     # the same way the model expects.
     backbone_group_ids = model.temporal_transformer.sample_group_ids(B, tokens.device)
     mod_attn_mask = model.temporal_transformer.build_modality_attn_mask(
-        modality_mask, B, group_ids=backbone_group_ids,
+        modality_mask,
+        B,
+        group_ids=backbone_group_ids,
     )
     # cross_attn_mask=None: this model has use_cls=False, so there is no CLS cross-attention.
     temporal_context, _cls = model.temporal_transformer(
-        temporal_input, modality_attn_mask=mod_attn_mask, cross_attn_mask=None,
+        temporal_input,
+        modality_attn_mask=mod_attn_mask,
+        cross_attn_mask=None,
     )
     return temporal_context  # (B, M, S, D)
 
@@ -79,7 +83,7 @@ def temporal_context(
     channel_ids: torch.Tensor,
     *,
     chunk_tokens: int | None = None,
-    device: str | torch.device = 'cpu',
+    device: str | torch.device = "cpu",
     autocast_dtype: torch.dtype | None = None,
 ) -> torch.Tensor:
     """Run the temporal model over one record (chunked) -> per-modality 1 Hz context.
@@ -103,22 +107,22 @@ def temporal_context(
         return torch.zeros((0, len(model.modality_configs), model.embed_dim), dtype=torch.float32)
 
     if chunk_tokens is None:
-        chunk_tokens = 32768 if device.type == 'cuda' else 2048
+        chunk_tokens = 32768 if device.type == "cuda" else 2048
     chunk = max(1, chunk_tokens)
     tokens_t = tokens[0].to(torch.long)  # (n_tokens, K)
     mod_mask_t = modality_mask.to(device, torch.bool)  # (1, M)
     ch_ids_t = channel_ids.to(device, torch.long)  # (1, M)
 
     autocast_ctx = (
-        torch.autocast(device_type='cuda', dtype=autocast_dtype)
-        if autocast_dtype is not None and device.type == 'cuda'
-        else torch.autocast(device_type='cpu', enabled=False)
+        torch.autocast(device_type="cuda", dtype=autocast_dtype)
+        if autocast_dtype is not None and device.type == "cuda"
+        else torch.autocast(device_type="cpu", enabled=False)
     )
 
     # On CUDA we pad each chunk to a fixed length so torch.compile reuses one graph across
     # records. On CPU/MPS attention runs eagerly over a materialised (S, S) score matrix, so
     # padding short records up to `chunk` would OOM — process actual lengths there.
-    pad_to_chunk = device.type == 'cuda'
+    pad_to_chunk = device.type == "cuda"
     pad_template = torch.zeros((chunk, total_k), dtype=tokens_t.dtype) if pad_to_chunk else None
 
     frames: list[torch.Tensor] = []
@@ -134,6 +138,6 @@ def temporal_context(
         with autocast_ctx:
             ctx = _temporal_only_forward(model, win, channel_ids=ch_ids_t, modality_mask=mod_mask_t)  # (1, M, S, D)
         ctx = ctx[:, :, :actual_len]  # drop padded tail
-        frames.append(ctx.squeeze(0).permute(1, 0, 2).to('cpu', torch.float32))  # (S, M, D)
+        frames.append(ctx.squeeze(0).permute(1, 0, 2).to("cpu", torch.float32))  # (S, M, D)
 
     return torch.cat(frames, dim=0)  # (n_tokens, M, D)
