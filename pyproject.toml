@@ -9,6 +9,15 @@ license-files = ["LICENSE"]
 authors = [
     {name = "Jonathan Carter"}
 ]
+keywords = ["sleep", "eeg", "ecg", "physiology", "embeddings", "foundation-model",
+            "time-series", "polysomnography", "edf", "deep-learning"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Programming Language :: Python :: 3",
+]
 dependencies = [
     "torch>=2.4",          # torch.nn.attention.flex_attention (hypnos.models.attention)
     "numpy",
@@ -18,6 +27,12 @@ dependencies = [
     "safetensors>=0.4.0",  # single-file model bundle format
     "fsspec",              # SignalTokenizer.from_checkpoint hf:// / s3:// support
 ]
+
+[project.urls]
+Homepage = "https://github.com/joncarter1/hypnos"
+Repository = "https://github.com/joncarter1/hypnos"
+Paper = "https://arxiv.org/abs/2606.09605"
+"Hugging Face" = "https://huggingface.co/joncarter/hypnos"
 
 [dependency-groups]
 # Dev-only: resolving checkpoints/configs from the research stack when seeding manifests.

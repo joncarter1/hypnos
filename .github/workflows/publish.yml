@@ -1,0 +1,64 @@
+name: Publish to PyPI
+
+# Publishes the package to PyPI whenever a GitHub Release is published.
+# Uses PyPI Trusted Publishing (OIDC) — no API tokens or secrets required.
+# See README "Releasing" for the one-time PyPI setup and the release steps.
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+
+      - name: Verify tag matches package version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(uv version --short)"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::Release tag ($tag) does not match pyproject version ($pkg)."
+            echo "Bump the version in pyproject.toml to match the release tag, or retag."
+            exit 1
+          fi
+          echo "Tag and package version agree: $pkg"
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Check distribution metadata
+        run: uvx twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # The GitHub Environment that the PyPI trusted publisher is scoped to.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/hypnos
+    permissions:
+      id-token: write  # required for OIDC trusted publishing
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

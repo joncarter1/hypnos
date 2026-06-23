@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://arxiv.org/abs/2606.09605"><img src="https://img.shields.io/badge/arXiv-2606.09605-b31b1b.svg" alt="arXiv"></a>
   <a href="https://huggingface.co/joncarter/hypnos"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow" alt="Hugging Face"></a>
+  <a href="https://pypi.org/project/hypnos/"><img src="https://img.shields.io/pypi/v/hypnos.svg" alt="PyPI"></a>
 </p>
 
 <p align="center">
@@ -21,7 +22,13 @@
 ## Installation
 
 ```bash
-uv sync          # or: pip install -e .
+pip install hypnos          # or: uv add hypnos
+```
+
+To work on the library itself, clone the repo and install from source:
+
+```bash
+uv sync                     # or: pip install -e .
 ```
 
 
