@@ -9,14 +9,14 @@ channel names below (``C3``, ``ECG``, …), which is why they are kept in a sepa
 """
 
 # Canonical channel names used by the 8 modalities.
-EEG_C3 = 'C3'
-EEG_C4 = 'C4'
-EOG_E1 = 'E1'
-EOG_E2 = 'E2'
-EMG_CHIN = 'Chin'
-ECG = 'ECG'
-ABD = 'ABD'
-THX = 'THX'
+EEG_C3 = "C3"
+EEG_C4 = "C4"
+EOG_E1 = "E1"
+EOG_E2 = "E2"
+EMG_CHIN = "Chin"
+ECG = "ECG"
+ABD = "ABD"
+THX = "THX"
 
 # Canonical channel name -> row in the (8-row) channel-embedding table.
 CHANNEL_REGISTRY: dict[str, int] = {

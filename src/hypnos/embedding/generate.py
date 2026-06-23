@@ -59,7 +59,7 @@ def synthesize(
     targets = list(names if modalities is None else modalities)
     unknown = [t for t in targets if t not in names]
     if unknown:
-        raise ValueError(f'unknown modalities {unknown}; choose from {names}')
+        raise ValueError(f"unknown modalities {unknown}; choose from {names}")
 
     device = next(model.parameters()).device
     total_K = sum(m.num_quantizers for m in mods)
@@ -70,12 +70,8 @@ def synthesize(
         spans[m.name] = (offset, offset + m.num_quantizers)
         offset += m.num_quantizers
 
-    modality_mask = torch.tensor(
-        [[m.name in targets for m in mods]], dtype=torch.bool, device=device
-    )
-    channel_ids = torch.tensor(
-        [[CHANNEL_REGISTRY[m.channels[0]] for m in mods]], dtype=torch.long, device=device
-    )
+    modality_mask = torch.tensor([[m.name in targets for m in mods]], dtype=torch.bool, device=device)
+    channel_ids = torch.tensor([[CHANNEL_REGISTRY[m.channels[0]] for m in mods]], dtype=torch.long, device=device)
 
     if prompt_tokens is None:
         prompt_tokens = torch.zeros(1, 0, total_K, dtype=torch.long, device=device)
@@ -83,8 +79,13 @@ def synthesize(
         prompt_tokens = prompt_tokens.to(device=device, dtype=torch.long)
 
     rollout = model.generate(
-        prompt_tokens, channel_ids, modality_mask,
-        num_steps=num_steps, temperature=temperature, top_k=top_k, top_p=top_p,
+        prompt_tokens,
+        channel_ids,
+        modality_mask,
+        num_steps=num_steps,
+        temperature=temperature,
+        top_k=top_k,
+        top_p=top_p,
         generator=generator,
     )
 

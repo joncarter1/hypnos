@@ -283,22 +283,22 @@ class MultiModalTemporalTransformer(nn.Module):
     ):
         super().__init__()
         if modality_attn_start_layer < 0:
-            raise ValueError(f'modality_attn_start_layer must be >= 0, got {modality_attn_start_layer}')
+            raise ValueError(f"modality_attn_start_layer must be >= 0, got {modality_attn_start_layer}")
         if modality_grouping_alpha is not None and modality_grouping_alpha <= 0:
-            raise ValueError(f'modality_grouping_alpha must be > 0 when set, got {modality_grouping_alpha}')
+            raise ValueError(f"modality_grouping_alpha must be > 0 when set, got {modality_grouping_alpha}")
         if random_subset_masking and modality_grouping_alpha is None:
-            raise ValueError('random_subset_masking=True requires modality_grouping_alpha to be set')
+            raise ValueError("random_subset_masking=True requires modality_grouping_alpha to be set")
         if disable_cross_modal_attention and random_subset_masking:
-            raise ValueError('disable_cross_modal_attention and random_subset_masking are mutually exclusive')
+            raise ValueError("disable_cross_modal_attention and random_subset_masking are mutually exclusive")
         if modality_dropout_p is not None:
             if not 0.0 <= modality_dropout_p <= 1.0:
-                raise ValueError(f'modality_dropout_p must be in [0, 1] when set, got {modality_dropout_p}')
+                raise ValueError(f"modality_dropout_p must be in [0, 1] when set, got {modality_dropout_p}")
             if modality_grouping_alpha is not None:
-                raise ValueError('modality_dropout_p and modality_grouping_alpha are mutually exclusive')
+                raise ValueError("modality_dropout_p and modality_grouping_alpha are mutually exclusive")
             if random_subset_masking:
-                raise ValueError('modality_dropout_p and random_subset_masking are mutually exclusive')
+                raise ValueError("modality_dropout_p and random_subset_masking are mutually exclusive")
             if disable_cross_modal_attention:
-                raise ValueError('modality_dropout_p and disable_cross_modal_attention are mutually exclusive')
+                raise ValueError("modality_dropout_p and disable_cross_modal_attention are mutually exclusive")
 
         self.num_modalities = num_modalities
         self.causal = causal
@@ -320,7 +320,7 @@ class MultiModalTemporalTransformer(nn.Module):
         # M modalities. Kept as a buffer (and referenced for device lookup) so
         # callers that pass modality_mask=None without a CUDA tensor still work.
         self.register_buffer(
-            'modality_attn_mask',
+            "modality_attn_mask",
             torch.ones(num_modalities, num_modalities, dtype=torch.bool),
         )
 
@@ -531,7 +531,7 @@ class MultiModalTemporalTransformer(nn.Module):
             same_group = group_ids.unsqueeze(2) == group_ids.unsqueeze(1)  # (B, M, M)
             bool_mask = bool_mask & same_group
 
-        return torch.where(bool_mask, 0.0, float('-inf')).unsqueeze(1)
+        return torch.where(bool_mask, 0.0, float("-inf")).unsqueeze(1)
 
     def build_cross_attn_mask(
         self,
@@ -584,7 +584,7 @@ class MultiModalTemporalTransformer(nn.Module):
                 safe_row = absent_q.unsqueeze(2) & eye  # (B, M, M) diagonal where absent
                 bool_mask = (bool_mask & keep_row) | safe_row
 
-        return torch.where(bool_mask, 0.0, float('-inf')).unsqueeze(1)
+        return torch.where(bool_mask, 0.0, float("-inf")).unsqueeze(1)
 
     def forward(
         self,

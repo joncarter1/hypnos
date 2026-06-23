@@ -40,7 +40,7 @@ class SConv1d(nn.Module):
         bias: bool = True,
         causal: bool = False,
         norm: str | None = None,
-        pad_mode: str = 'reflect',
+        pad_mode: str = "reflect",
     ):
         super().__init__()
         self.causal = causal
@@ -72,7 +72,7 @@ class SConv1d(nn.Module):
             bias=bias,
         )
 
-        if norm == 'weight':
+        if norm == "weight":
             self.conv = weight_norm(self.conv)
             self.norm = None
         else:
@@ -123,7 +123,7 @@ class SConvTranspose1d(nn.Module):
             bias=bias,
         )
 
-        if norm == 'weight':
+        if norm == "weight":
             self.conv = weight_norm(self.conv)
             self.norm = None
         else:
@@ -171,11 +171,11 @@ class SEANetResnetBlock(nn.Module):
         dim: int,
         kernel_sizes: tp.List[int] = [3, 1],
         dilations: tp.List[int] = [1, 1],
-        activation: str = 'gelu',
-        norm: str | None = 'layer',
+        activation: str = "gelu",
+        norm: str | None = "layer",
         causal: bool = False,
         compress: int = 2,
-        pad_mode: str = 'reflect',
+        pad_mode: str = "reflect",
     ):
         super().__init__()
         assert len(kernel_sizes) == len(dilations) == 2
@@ -244,13 +244,13 @@ class SEANetEncoder(nn.Module):
         ratios: tp.List[int] = [4, 4, 4, 4],
         n_residual_layers: int = 1,
         dilation_base: int = 1,
-        activation: str = 'gelu',
-        norm: str | None = 'layer',
+        activation: str = "gelu",
+        norm: str | None = "layer",
         causal: bool = False,
         kernel_size: int = 7,
         last_kernel_size: int = 7,
         stride_kernel_multiplier: int = 2,
-        pad_mode: str = 'reflect',
+        pad_mode: str = "reflect",
         use_activation_checkpointing: bool = False,
     ):
         super().__init__()
@@ -398,12 +398,12 @@ class SEANetDecoder(nn.Module):
         ratios: tp.List[int] = [4, 4, 4, 4],
         n_residual_layers: int = 1,
         dilation_base: int = 1,
-        activation: str = 'gelu',
-        norm: str | None = 'layer',
+        activation: str = "gelu",
+        norm: str | None = "layer",
         causal: bool = False,
         kernel_size: int = 7,
         stride_kernel_multiplier: int = 2,
-        pad_mode: str = 'reflect',
+        pad_mode: str = "reflect",
         use_activation_checkpointing: bool = False,
     ):
         super().__init__()

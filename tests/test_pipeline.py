@@ -89,19 +89,34 @@ def build_bundle(path):
             continue
         kw = tokenizer_kwargs(k, sr, ratios)
         tokenizers[stem] = {
-            "signal_type": _st, "num_quantizers": k, "codebook_size": CB,
-            "token_duration_sec": 1.0, "sample_rate": sr, "tokenizer_kwargs": kw,
+            "signal_type": _st,
+            "num_quantizers": k,
+            "codebook_size": CB,
+            "token_duration_sec": 1.0,
+            "sample_rate": sr,
+            "tokenizer_kwargs": kw,
         }
         for k_, v in SignalTokenizer(**kw).state_dict().items():
             tensors[f"tok/{stem}/{k_}"] = v.detach().contiguous().clone()
     modalities = [
-        {"name": n, "signal_type": st, "channels": ch, "tokenizer": stem, "num_quantizers": k,
-         "codebook_size": CB, "token_duration_sec": 1.0, "sample_rate": sr, "preprocess_modality": pp}
+        {
+            "name": n,
+            "signal_type": st,
+            "channels": ch,
+            "tokenizer": stem,
+            "num_quantizers": k,
+            "codebook_size": CB,
+            "token_duration_sec": 1.0,
+            "sample_rate": sr,
+            "preprocess_modality": pp,
+        }
         for (n, st, ch, stem, k, sr, _r, pp) in MODALITIES
     ]
     config = {
         "model_target": "hypnos.models.rq_transformer.MultiModalRQTransformer",
-        "model_kwargs": MODEL_KWARGS, "modalities": modalities, "tokenizers": tokenizers,
+        "model_kwargs": MODEL_KWARGS,
+        "modalities": modalities,
+        "tokenizers": tokenizers,
     }
     save_file(tensors, str(path), metadata={"format_version": "1", "config": json.dumps(config)})
 

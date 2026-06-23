@@ -29,14 +29,14 @@ from .manifest import ModalitySpec, ModelMetadata
 from .pipeline import preprocess_edf, tokenize
 
 __all__ = [
-    'load_model',
-    'preprocess_edf',
-    'tokenize',
-    'embed',
-    'embed_edf',
-    'synthesize',
-    'ModelMetadata',
-    'ModalitySpec',
+    "load_model",
+    "preprocess_edf",
+    "tokenize",
+    "embed",
+    "embed_edf",
+    "synthesize",
+    "ModelMetadata",
+    "ModalitySpec",
 ]
 
 
@@ -48,7 +48,7 @@ def embed(
     metadata: ModelMetadata,
     *,
     chunk_tokens: int | None = None,
-    device: str | torch.device = 'cpu',
+    device: str | torch.device = "cpu",
     autocast_dtype: torch.dtype | None = None,
 ) -> dict[str, np.ndarray]:
     """Generate per-modality 1 Hz embeddings from assembled tokens.
@@ -59,22 +59,23 @@ def embed(
     time (see the README).
     """
     ctx = temporal_context(
-        model, tokens, modality_mask, channel_ids,
-        chunk_tokens=chunk_tokens, device=device, autocast_dtype=autocast_dtype,
+        model,
+        tokens,
+        modality_mask,
+        channel_ids,
+        chunk_tokens=chunk_tokens,
+        device=device,
+        autocast_dtype=autocast_dtype,
     )  # (T, M, D) float32
     present = modality_mask[0].tolist()
-    return {
-        spec.name: ctx[:, i].to(torch.float16).numpy()
-        for i, spec in enumerate(metadata.modalities)
-        if present[i]
-    }
+    return {spec.name: ctx[:, i].to(torch.float16).numpy() for i, spec in enumerate(metadata.modalities) if present[i]}
 
 
 def embed_edf(
     edf_path: str,
     model_repo_or_path: str = DEFAULT_REPO,
     *,
-    device: str | torch.device = 'cpu',
+    device: str | torch.device = "cpu",
     dtype: torch.dtype = torch.float32,
     notch_freq: float = 50.0,
     causal: bool = True,
@@ -94,6 +95,12 @@ def embed_edf(
     signals = preprocess_edf(edf_path, meta, notch_freq=notch_freq, causal=causal)
     tokens, modality_mask, channel_ids = tokenize(tokenizers, meta, signals, device=device)
     return embed(
-        model, tokens, modality_mask, channel_ids, meta,
-        chunk_tokens=chunk_tokens, device=device, autocast_dtype=autocast_dtype,
+        model,
+        tokens,
+        modality_mask,
+        channel_ids,
+        meta,
+        chunk_tokens=chunk_tokens,
+        device=device,
+        autocast_dtype=autocast_dtype,
     )

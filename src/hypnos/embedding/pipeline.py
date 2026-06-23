@@ -64,17 +64,23 @@ def preprocess_edf(
         ch = m.channels[0]
         rc = resolved.get(ch)
         if rc is None:
-            logger.info('Channel %r for modality %r not present in %s; skipping.', ch, m.name, edf_path)
+            logger.info("Channel %r for modality %r not present in %s; skipping.", ch, m.name, edf_path)
             continue
         sig = resample_signal(np.asarray(rc.signal), int(rc.sampling_rate), m.sample_rate)
         if causal:
             processed, _, _ = causal_preprocess_signal(
-                sig, fs=m.sample_rate, modality=m.preprocess_modality,
-                notch_freq=notch_freq, tau_seconds=tau_seconds,
+                sig,
+                fs=m.sample_rate,
+                modality=m.preprocess_modality,
+                notch_freq=notch_freq,
+                tau_seconds=tau_seconds,
             )
         else:
             processed, _, _ = preprocess_signal(
-                sig, fs=m.sample_rate, modality=m.preprocess_modality, notch_freq=notch_freq,
+                sig,
+                fs=m.sample_rate,
+                modality=m.preprocess_modality,
+                notch_freq=notch_freq,
             )
         signals[m.name] = np.asarray(processed, dtype=np.float32)
     return signals
@@ -85,7 +91,7 @@ def tokenize(
     tokenizers: dict,
     metadata: ModelMetadata,
     signals: dict[str, np.ndarray],
-    device: str | torch.device = 'cpu',
+    device: str | torch.device = "cpu",
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Tokenize per-modality signals and assemble the token tensor.
 
@@ -108,14 +114,14 @@ def tokenize(
             continue
         x = torch.from_numpy(np.asarray(sig, dtype=np.float32)).view(1, 1, -1).to(device)
         tok = tokenizers[m.name].tokenize(x)  # (1, n_m, K_m)
-        per_modality_tokens[m.name] = tok[0].to('cpu', torch.long)
+        per_modality_tokens[m.name] = tok[0].to("cpu", torch.long)
 
     if not per_modality_tokens:
-        raise ValueError('No modalities present in the recording; cannot tokenize.')
+        raise ValueError("No modalities present in the recording; cannot tokenize.")
 
     n_tokens = min(t.shape[0] for t in per_modality_tokens.values())
     if n_tokens == 0:
-        raise ValueError('Recording too short: produced 0 tokens for at least one present modality.')
+        raise ValueError("Recording too short: produced 0 tokens for at least one present modality.")
 
     blocks: list[torch.Tensor] = []
     mask: list[bool] = []
