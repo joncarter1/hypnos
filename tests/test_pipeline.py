@@ -144,6 +144,54 @@ def test_temporal_only_matches_forward():
     print(f"[A] _temporal_only_forward matches forward (max_diff={max_diff:.2e}) OK")
 
 
+def test_get_column_match_channel_aliases():
+    from hypnos.data.edf import get_column_match
+
+    # Exact match wins.
+    assert get_column_match("ECG", ["ECG", "EKG"]) == "ECG"
+    # Built-in ALT_COLUMNS alias is used when no exact match.
+    assert get_column_match("ECG", ["EKG"]) == "EKG"
+    # Caller-supplied alias resolves labels the built-ins don't cover.
+    assert get_column_match("ECG", ["MyECG"], {"ECG": ["MyECG"]}) == "MyECG"
+    # Caller aliases take precedence over the built-ins.
+    assert get_column_match("ECG", ["EKG", "MyECG"], {"ECG": ["MyECG"]}) == "MyECG"
+    # No match returns None.
+    assert get_column_match("ECG", ["Nope"], {"ECG": ["MyECG"]}) is None
+
+    print("[C] get_column_match honours channel_aliases OK")
+
+
+def test_get_column_match_normalization():
+    from hypnos.data.edf import get_column_match
+
+    # Case / separator / suffix insensitive, returning the original EDF label.
+    assert get_column_match("C3", ["c3-m2"]) == "c3-m2"
+    assert get_column_match("C3", ["C3:M2"]) == "C3:M2"
+    assert get_column_match("C3", ["C3-M2_PDS"]) == "C3-M2_PDS"
+    # Aliases are normalized too.
+    assert get_column_match("ECG", ["ekg"]) == "ekg"
+    # Exact match still wins outright (returned verbatim).
+    assert get_column_match("ECG", ["ECG", "ekg"]) == "ECG"
+
+    print("[D] get_column_match normalization OK")
+
+
+def test_reference_label_resolution():
+    from hypnos.data.edf import _find_reference_label, _is_pre_referenced
+
+    # TP9/TP10 are accepted as M1/M2 equivalents, normalized, original label returned.
+    assert _find_reference_label("M1", ["TP9"]) == "TP9"
+    assert _find_reference_label("M2", ["a2"]) == "a2"
+    assert _find_reference_label("M2", ["Nope"]) is None
+
+    # Pre-reference detection is case-insensitive; a bare reference is not pre-referenced.
+    assert _is_pre_referenced("C3", "c3-m2") is True
+    assert _is_pre_referenced("C3", "C3") is False
+    assert _is_pre_referenced("M2", "M2") is False  # M2 isn't a CONTRALATERAL_REF channel
+
+    print("[E] reference label resolution OK")
+
+
 def make_synthetic_edf(path, duration_sec=120):
     labels = {"C3-M2": 128, "C4-M1": 128, "ECG": 128, "ABD": 32}
     w = pyedflib.EdfWriter(str(path), len(labels))

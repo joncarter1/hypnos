@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import logging
 
+from collections.abc import Mapping, Sequence
+
 import numpy as np
 import pyedflib
 import torch
@@ -35,6 +37,7 @@ def preprocess_edf(
     notch_freq: float = 50.0,
     causal: bool = True,
     tau_seconds: float = 60.0,
+    channel_aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> dict[str, np.ndarray]:
     """Load and preprocess each modality's signal from an EDF.
 
@@ -51,13 +54,19 @@ def preprocess_edf(
         causal: Use the causal preprocessing path (matches the released causal tokenizers).
             Set False only to experiment with the zero-phase ``preprocess_signal``.
         tau_seconds: Rolling-normaliser timescale for the causal path.
+        channel_aliases: Optional ``{canonical_name: [extra EDF labels]}`` mapping for
+            recordings whose channel labels aren't covered by the built-in ``ALT_COLUMNS``.
+            Keys are canonical channel names (e.g. ``"ECG"``, ``"C3"``); caller aliases take
+            precedence over the built-ins.
     """
     # One channel per modality for the released model (in_channels=1 tokenizers); we take
     # the first channel of each modality spec.
     all_channels = sorted({ch for m in metadata.modalities for ch in m.channels})
 
     with pyedflib.EdfReader(edf_path) as f:
-        resolved = load_psg_channels(f, all_channels, drop_unreferenced=True)
+        resolved = load_psg_channels(
+            f, all_channels, drop_unreferenced=True, channel_aliases=channel_aliases
+        )
 
     signals: dict[str, np.ndarray] = {}
     for m in metadata.modalities:

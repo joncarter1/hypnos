@@ -6,6 +6,7 @@ z-score normalises them, so absolute units don't matter and no unit conversion i
 """
 
 import logging
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from math import gcd
 
@@ -93,8 +94,8 @@ ALT_COLUMNS = {
 # Contralateral mastoid referencing (AASM): canonical channel -> required reference electrode.
 CONTRALATERAL_REF: dict[str, str] = {"C3": "M2", "C4": "M1", "E1": "M2", "E2": "M1"}
 
-# A1/A2 are legacy equivalents of M1/M2.
-REFERENCE_ALTS: dict[str, list[str]] = {"M1": ["A1"], "M2": ["A2"]}
+# Mastoid equivalents of M1/M2: A1/A2 (legacy 10-20) and TP9/TP10 (10-10).
+REFERENCE_ALTS: dict[str, list[str]] = {"M1": ["A1", "TP9"], "M2": ["A2", "TP10"]}
 _ALL_REF_NAMES: set[str] = set(REFERENCE_ALTS) | {a for alts in REFERENCE_ALTS.values() for a in alts}
 
 # Pre-computed bipolar labels (already derived in the EDF), checked before components.
@@ -114,13 +115,47 @@ BIPOLAR_COMPONENTS: dict[str, list[tuple[str, str]]] = {
 }
 
 
-def get_column_match(target_col: str, available_cols: list[str]) -> str | None:
-    """Return the EDF label matching ``target_col`` (exact or via ``ALT_COLUMNS``), else None."""
+def _clean_label(label: str) -> str:
+    """Normalize an EDF label for tolerant matching.
+
+    Uppercases, strips whitespace and a few device-specific suffixes, and unifies the
+    separators (``:`` / ``/`` → ``-``) so labels like ``'c3:m2'``, ``'C3-M2_PDS'`` and
+    ``'C3-M2'`` all compare equal.
+    """
+    cleaned = label.strip().upper()
+    for suffix in ("_PDS", "_EG"):
+        if cleaned.endswith(suffix):
+            cleaned = cleaned[: -len(suffix)]
+    return cleaned.replace(":", "-").replace("/", "-").strip()
+
+
+def get_column_match(
+    target_col: str,
+    available_cols: list[str],
+    channel_aliases: Mapping[str, Sequence[str]] | None = None,
+) -> str | None:
+    """Return the EDF label matching ``target_col``, else None.
+
+    An exact label match wins outright. Otherwise the canonical name and its aliases are
+    compared against the available labels under :func:`_clean_label` normalization (case,
+    whitespace, separator and suffix insensitive). Candidate order: the canonical name,
+    then caller-supplied ``channel_aliases`` (precedence over the built-ins), then the
+    built-in ``ALT_COLUMNS`` table. The original (un-normalized) EDF label is returned.
+    """
     if target_col in available_cols:
         return target_col
-    for alt_col in ALT_COLUMNS.get(target_col, ()):
-        if alt_col in available_cols:
-            return alt_col
+
+    candidates: list[str] = [target_col]
+    if channel_aliases is not None:
+        candidates.extend(channel_aliases.get(target_col, ()))
+    candidates.extend(ALT_COLUMNS.get(target_col, ()))
+
+    cleaned_available = [(col, _clean_label(col)) for col in available_cols]
+    for cand in candidates:
+        cand_clean = _clean_label(cand)
+        for col, col_clean in cleaned_available:
+            if col_clean == cand_clean:
+                return col
     return None
 
 
@@ -138,12 +173,17 @@ class ResolvedChannel:
 
 
 def _find_reference_label(ref_name: str, available_labels: list[str]) -> str | None:
-    """Find a reference channel (M1/M2 or A1/A2 equivalent) in available EDF labels."""
+    """Find a reference channel (M1/M2 or A1/A2/TP9/TP10 equivalent) in available EDF labels.
+
+    Matches under :func:`_clean_label` normalization, returning the original EDF label.
+    """
     if ref_name in available_labels:
         return ref_name
-    for alt in REFERENCE_ALTS.get(ref_name, []):
-        if alt in available_labels:
-            return alt
+    for cand in (ref_name, *REFERENCE_ALTS.get(ref_name, [])):
+        cand_clean = _clean_label(cand)
+        for label in available_labels:
+            if _clean_label(label) == cand_clean:
+                return label
     return None
 
 
@@ -171,10 +211,14 @@ def _resample_reference(ref_signal: np.ndarray, ref_fs: int, target_fs: int) -> 
 
 
 def _is_pre_referenced(ch_name: str, actual_label: str) -> bool:
-    """Whether the matched EDF label is already referenced (e.g. 'C3-M2', 'E2-M1')."""
+    """Whether the matched EDF label is already referenced (e.g. 'C3-M2', 'E2-M1').
+
+    Case-insensitive; a label that *is* a bare reference (e.g. 'M1') is not pre-referenced.
+    """
     if ch_name not in CONTRALATERAL_REF:
         return False
-    return any(ref in actual_label for ref in _ALL_REF_NAMES)
+    upper = actual_label.upper()
+    return any(ref in upper and upper != ref for ref in _ALL_REF_NAMES)
 
 
 def _read_signal_metadata(f: pyedflib.EdfReader, idx: int) -> tuple[int, str, float, float]:
@@ -191,6 +235,7 @@ def load_psg_channels(
     f: pyedflib.EdfReader,
     channels: list[str],
     drop_unreferenced: bool = False,
+    channel_aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> dict[str, ResolvedChannel]:
     """Load PSG channels from an open EDF with proper referencing and derivations.
 
@@ -206,6 +251,9 @@ def load_psg_channels(
         channels: Canonical channel names (e.g. ['C3', 'E1', 'Chin', 'ECG']).
         drop_unreferenced: If True, skip channels that need contralateral referencing
             but have no reference electrode available (e.g. bare E1 without M2).
+        channel_aliases: Optional ``{canonical_name: [extra EDF labels]}`` mapping, merged
+            with the built-in ``ALT_COLUMNS`` for recordings with non-standard labels.
+            Caller aliases take precedence over the built-ins.
 
     Returns:
         Dict mapping canonical channel name to ResolvedChannel (channels not found are omitted).
@@ -217,7 +265,9 @@ def load_psg_channels(
     ref_signals = _load_reference_signals(f, label_to_idx)
     result: dict[str, ResolvedChannel] = {}
     for ch_name in channels:
-        resolved = _resolve_one_channel(f, ch_name, available, label_to_idx, ref_signals, drop_unreferenced)
+        resolved = _resolve_one_channel(
+            f, ch_name, available, label_to_idx, ref_signals, drop_unreferenced, channel_aliases
+        )
         if resolved is not None:
             result[ch_name] = resolved
     return result
@@ -230,6 +280,7 @@ def _resolve_one_channel(
     label_to_idx: dict[str, int],
     ref_signals: dict[str, tuple[np.ndarray, int]],
     drop_unreferenced: bool,
+    channel_aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> ResolvedChannel | None:
     """Resolve a single canonical channel from an EDF.
 
@@ -283,7 +334,7 @@ def _resolve_one_channel(
         # Fall through to standard resolution (single electrode fallback)
 
     # --- Step 2: Standard name resolution ---
-    actual_name = get_column_match(ch_name, available)
+    actual_name = get_column_match(ch_name, available, channel_aliases)
     if actual_name is None:
         _logger.info(f"Channel {ch_name} not found in EDF")
         return None

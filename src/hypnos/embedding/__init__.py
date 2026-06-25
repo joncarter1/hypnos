@@ -19,6 +19,8 @@ Step-by-step control (reuse the loaded model across recordings)::
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+
 import numpy as np
 import torch
 
@@ -81,18 +83,26 @@ def embed_edf(
     causal: bool = True,
     chunk_tokens: int | None = None,
     autocast_dtype: torch.dtype | None = None,
+    channel_aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> dict[str, np.ndarray]:
     """Convenience: load model -> preprocess EDF -> tokenize -> embed, in one call.
 
     ``model_repo_or_path`` defaults to the released model on the Hub. ``notch_freq`` is the
     powerline frequency to filter out — 50 Hz (default, most of the world) or 60 Hz (Americas).
 
+    ``channel_aliases`` lets you map non-standard EDF labels onto the model's canonical
+    channels for recordings the built-in ``ALT_COLUMNS`` table doesn't cover, e.g.
+    ``{"ECG": ["MyECGLabel"], "C3": ["EEG_C3_custom"]}``. Caller aliases take precedence
+    over the built-ins.
+
     Returns a ``{modality_name: [n_seconds, embed_dim]}`` dict of per-modality 1 Hz
     embeddings (only modalities present in the recording). For repeated embedding, call
     :func:`load_model` once and reuse the returned model/tokenizers.
     """
     model, tokenizers, meta = load_model(model_repo_or_path, device=device, dtype=dtype)
-    signals = preprocess_edf(edf_path, meta, notch_freq=notch_freq, causal=causal)
+    signals = preprocess_edf(
+        edf_path, meta, notch_freq=notch_freq, causal=causal, channel_aliases=channel_aliases
+    )
     tokens, modality_mask, channel_ids = tokenize(tokenizers, meta, signals, device=device)
     return embed(
         model,
