@@ -64,9 +64,7 @@ def preprocess_edf(
     all_channels = sorted({ch for m in metadata.modalities for ch in m.channels})
 
     with pyedflib.EdfReader(edf_path) as f:
-        resolved = load_psg_channels(
-            f, all_channels, drop_unreferenced=True, channel_aliases=channel_aliases
-        )
+        resolved = load_psg_channels(f, all_channels, drop_unreferenced=True, channel_aliases=channel_aliases)
 
     signals: dict[str, np.ndarray] = {}
     for m in metadata.modalities:
