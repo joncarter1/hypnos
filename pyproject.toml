@@ -1,6 +1,6 @@
 [project]
 name = "hypnos"
-version = "0.1.0"
+version = "0.2.0"
 description = "Minimal inference library for Hypnos: load an EDF, preprocess, and generate sleep embeddings from pretrained checkpoints."
 readme = "README.md"
 requires-python = ">=3.11"

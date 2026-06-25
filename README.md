@@ -65,6 +65,32 @@ tokens, modality_mask, channel_ids = tokenize(tokenizers, meta, signals)
 emb = embed(model, tokens, modality_mask, channel_ids, meta)   # {name: [T, D]}
 ```
 
+### Custom channel labels
+
+Hypnos maps each EDF signal label onto a canonical channel (`C3`, `C4`, `E1`, `E2`, `Chin`,
+`ECG`, `ABD`, `THX`). It already recognizes many common naming conventions out of the box
+(e.g. `EKG`/`ECG L-ECG R` → `ECG`, `C3-M2` → `C3`), plus AASM contralateral re-referencing
+(mastoid equivalents `A1`/`A2` and `TP9`/`TP10` are accepted as `M1`/`M2`) and chin-EMG
+bipolar derivation. Matching is tolerant of case, whitespace and `:`/`/` separators (so
+`c3:m2` resolves like `C3-M2`). A modality whose channel can't be found is simply skipped.
+
+If your recording uses labels Hypnos doesn't recognize, pass `channel_aliases` — a
+`{canonical_name: [extra EDF labels]}` mapping that's merged with the built-ins (your aliases
+take precedence):
+
+```python
+emb = embed_edf(
+    "recording.edf",
+    channel_aliases={
+        "ECG": ["MyDeviceEKG"],     # canonical "ECG" <- EDF label "MyDeviceEKG"
+        "C3": ["EEG_C3_custom"],
+    },
+)
+```
+
+`channel_aliases` is also accepted by `preprocess_edf(...)` in the step-by-step API. The
+built-in alias tables live in `hypnos.data.edf` (`ALT_COLUMNS`).
+
 ### Pooling
 
 Hypnos produces embeddings at 1 Hz for each modality. In our experiments, we found that simple pooling over modalities and timescales works well for downstream tasks. For example, to produce a single embedding per 30-second sleep epoch:
