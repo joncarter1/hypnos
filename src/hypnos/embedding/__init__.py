@@ -100,9 +100,7 @@ def embed_edf(
     :func:`load_model` once and reuse the returned model/tokenizers.
     """
     model, tokenizers, meta = load_model(model_repo_or_path, device=device, dtype=dtype)
-    signals = preprocess_edf(
-        edf_path, meta, notch_freq=notch_freq, causal=causal, channel_aliases=channel_aliases
-    )
+    signals = preprocess_edf(edf_path, meta, notch_freq=notch_freq, causal=causal, channel_aliases=channel_aliases)
     tokens, modality_mask, channel_ids = tokenize(tokenizers, meta, signals, device=device)
     return embed(
         model,
