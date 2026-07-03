@@ -270,7 +270,31 @@ def test_end_to_end_pipeline():
         print("[B] absent-modality path OK; per-modality keys", sorted(per2))
 
 
+def test_tokenize_chunked_matches_single_pass():
+    """Chunked (windowed + both-side context) tokenization is bit-identical to one pass."""
+    from hypnos.embedding import load_model, preprocess_edf, tokenize
+
+    with tempfile.TemporaryDirectory() as d:
+        bundle_path = Path(d) / "bundle.safetensors"
+        build_bundle(bundle_path)
+        edf = Path(d) / "rec.edf"
+        make_synthetic_edf(edf, duration_sec=200)  # long enough for many chunks at chunk_seconds=20
+
+        _lm, toks, meta = load_model(bundle_path, device="cpu")
+        signals = preprocess_edf(str(edf), meta, notch_freq=60.0, causal=True)
+
+        single, m_s, c_s = tokenize(toks, meta, signals, device="cpu", chunk_seconds=None)
+        chunked, m_c, c_c = tokenize(toks, meta, signals, device="cpu", chunk_seconds=20, context_seconds=16)
+
+        assert single.shape[1] > 20, "signal must span multiple chunks to exercise the seams"
+        assert single.shape == chunked.shape, (single.shape, chunked.shape)
+        assert torch.equal(m_s, m_c) and torch.equal(c_s, c_c)
+        assert torch.equal(single, chunked), f"{(single != chunked).sum().item()} token(s) differ"
+        print("[F] chunked tokenize == single-pass OK", tuple(chunked.shape))
+
+
 if __name__ == "__main__":
     test_temporal_only_matches_forward()
     test_end_to_end_pipeline()
+    test_tokenize_chunked_matches_single_pass()
     print("\nALL CHECKS PASSED")

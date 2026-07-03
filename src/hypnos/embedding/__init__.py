@@ -82,6 +82,7 @@ def embed_edf(
     notch_freq: float = 50.0,
     causal: bool = True,
     chunk_tokens: int | None = None,
+    tokenize_chunk_seconds: int | None = 1800,
     autocast_dtype: torch.dtype | None = None,
     channel_aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> dict[str, np.ndarray]:
@@ -101,7 +102,9 @@ def embed_edf(
     """
     model, tokenizers, meta = load_model(model_repo_or_path, device=device, dtype=dtype)
     signals = preprocess_edf(edf_path, meta, notch_freq=notch_freq, causal=causal, channel_aliases=channel_aliases)
-    tokens, modality_mask, channel_ids = tokenize(tokenizers, meta, signals, device=device)
+    tokens, modality_mask, channel_ids = tokenize(
+        tokenizers, meta, signals, device=device, chunk_seconds=tokenize_chunk_seconds
+    )
     return embed(
         model,
         tokens,
