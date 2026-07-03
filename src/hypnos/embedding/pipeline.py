@@ -93,12 +93,60 @@ def preprocess_edf(
     return signals
 
 
+def _tokenize_signal(
+    tokenizer,
+    signal: np.ndarray,
+    samples_per_token: int,
+    chunk_tokens: int | None,
+    context_tokens: int,
+    device: str | torch.device,
+) -> torch.Tensor:
+    """Tokenize one 1-D signal to ``(n_tokens, K)`` int64 on CPU.
+
+    The SEANet encoder allocates activations proportional to the *whole* input length, so a
+    full-night recording tokenized in one pass costs tens of GB. To bound that, long signals
+    are tokenized in windows of ``chunk_tokens`` tokens. The tokenizer has a bounded receptive
+    field (a few conv layers plus the encoder transformer's causal window), reaching mostly
+    backwards but with a small forward leak from conv padding, so each window is padded with
+    ``context_tokens`` tokens of real signal on **both** sides whose outputs are then
+    discarded. As long as ``context_tokens`` exceeds the receptive field in each direction the
+    retained tokens are **identical** to a single-pass tokenization. Peak memory is set by
+    ``chunk_tokens + 2 * context_tokens``, not by the recording length.
+
+    ``chunk_tokens=None`` (or a signal already shorter than one chunk) tokenizes in a single
+    pass, preserving the original behaviour for short recordings.
+    """
+    n_tokens = len(signal) // samples_per_token
+
+    def _run(sig: np.ndarray) -> torch.Tensor:
+        x = torch.from_numpy(np.ascontiguousarray(sig, dtype=np.float32)).view(1, 1, -1).to(device)
+        return tokenizer.tokenize(x)[0].to("cpu", torch.long)  # (n, K)
+
+    if chunk_tokens is None or n_tokens <= chunk_tokens:
+        return _run(signal)
+
+    blocks: list[torch.Tensor] = []
+    start = 0
+    while start < n_tokens:
+        stop = min(start + chunk_tokens, n_tokens)
+        left = min(context_tokens, start)  # real context available before this window
+        right = min(context_tokens, n_tokens - stop)  # ... and after it
+        win = signal[(start - left) * samples_per_token : (stop + right) * samples_per_token]
+        toks = _run(win)  # (left + (stop - start) + right, K)
+        blocks.append(toks[left : left + (stop - start)].clone())
+        start = stop
+    return torch.cat(blocks, dim=0)  # (n_tokens, K)
+
+
 @torch.inference_mode()
 def tokenize(
     tokenizers: dict,
     metadata: ModelMetadata,
     signals: dict[str, np.ndarray],
     device: str | torch.device = "cpu",
+    *,
+    chunk_seconds: int | None = 1800,
+    context_seconds: int = 128,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Tokenize per-modality signals and assemble the token tensor.
 
@@ -112,6 +160,14 @@ def tokenize(
 
     All present modalities are truncated to the common minimum token count (matches the
     train-time join).
+
+    ``chunk_seconds`` bounds tokenizer memory on long recordings: each modality is tokenized
+    in ``chunk_seconds``-long windows, each padded with ``context_seconds`` of real signal on
+    both sides that is discarded after tokenizing. Because the tokenizer has a small receptive
+    field, the result is identical to a single pass as long as ``context_seconds`` exceeds it
+    (~96 s backwards, ~1 s forwards for the released tokenizers; 128 s default leaves margin).
+    Set ``chunk_seconds=None`` to tokenize the whole signal at once (higher peak memory; only
+    sensible for short recordings).
     """
     # Tokenize present modalities to (n_m, K_m) int64.
     per_modality_tokens: dict[str, torch.Tensor] = {}
@@ -119,9 +175,19 @@ def tokenize(
         sig = signals.get(m.name)
         if sig is None:
             continue
-        x = torch.from_numpy(np.asarray(sig, dtype=np.float32)).view(1, 1, -1).to(device)
-        tok = tokenizers[m.name].tokenize(x)  # (1, n_m, K_m)
-        per_modality_tokens[m.name] = tok[0].to("cpu", torch.long)
+        samples_per_token = getattr(
+            tokenizers[m.name], "samples_per_token", int(round(m.sample_rate * m.token_duration_sec))
+        )
+        chunk_tokens = None if chunk_seconds is None else max(1, int(chunk_seconds / m.token_duration_sec))
+        context_tokens = max(0, int(context_seconds / m.token_duration_sec))
+        per_modality_tokens[m.name] = _tokenize_signal(
+            tokenizers[m.name],
+            np.asarray(sig, dtype=np.float32),
+            samples_per_token,
+            chunk_tokens,
+            context_tokens,
+            device,
+        )
 
     if not per_modality_tokens:
         raise ValueError("No modalities present in the recording; cannot tokenize.")

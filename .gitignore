@@ -4,6 +4,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 dist/
+# demo.ipynb: downloaded DOD-O records + cached embeddings (large; regenerated on run)
+data/
 # Seeded checkpoints / manifests (large binaries; fetched or seeded, not committed)
 checkpoints/
 *.ckpt

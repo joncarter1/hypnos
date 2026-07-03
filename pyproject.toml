@@ -1,6 +1,6 @@
 [project]
 name = "hypnos"
-version = "0.2.0"
+version = "0.3.0"
 description = "Minimal inference library for Hypnos: load an EDF, preprocess, and generate sleep embeddings from pretrained checkpoints."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -55,3 +55,6 @@ packages = ["src/hypnos"]
 
 [tool.ruff]
 line-length = 120
+# Notebooks follow their own conventions (in-cell imports, `a; b` one-liners,
+# trailing `plt.show()`); lint/format only the library and tests.
+extend-exclude = ["*.ipynb"]

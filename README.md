@@ -34,6 +34,10 @@ uv sync                     # or: pip install -e .
 
 ## Usage
 
+> **Worked example:** [`demo.ipynb`](demo.ipynb) runs the full pipeline end-to-end — download the
+> [Dreem Open Dataset (DOD-O)](https://arxiv.org/abs/1911.03221), generate Hypnos embeddings, and
+> train a linear-probe sleep stager evaluated with subject-wise cross-validation.
+
 Load an EDF, preprocess, and generate embeddings from the pre-trained Hypnos model:
 
 ```python
