@@ -1,7 +1,7 @@
 <h1 align="center">Hypnos</h1>
 
 <p align="center">
-  <em>Next-Token Prediction Learns Generalisable Representations of Sleep Physiology</em>
+  <em>Learning Generalisable Representations of Sleep Physiology via Next-Token Prediction</em>
 </p>
 
 <p align="center">
@@ -15,6 +15,9 @@
 </p>
 
 ## Updates
+
+**November 2026**
+- **Hypnos is accepted at NeurIPS 2026.** The paper has been updated with new experiments and a new title: *Hypnos: Learning Generalisable Representations of Sleep Physiology via Next-Token Prediction*.
 
 **June 2026**
 - **Initial release**: the pretrained Hypnos model is available on the [HuggingFace Hub](https://huggingface.co/joncarter/hypnos), together with a minimal inference library for generating sleep embeddings from EDF recordings. Paper: [arXiv:2606.09605](https://arxiv.org/abs/2606.09605).
@@ -160,3 +163,16 @@ no config framework. safetensors is a pure-tensor format — no arbitrary-code u
 > does **not** raise peak memory — chunks run sequentially — so a full night works on CPU or
 > MPS (a 3 h record takes ~50 s at ~11 GB RAM on CPU). On Apple Silicon this memory is shared
 > with the system, so lower `chunk_tokens` if constrained.
+
+## Citation
+
+```bibtex
+@inproceedings{carterHypnos2026,
+  title         = {Hypnos: Learning Generalisable Representations of Sleep Physiology via Next-Token Prediction},
+  author        = {Carter, Jonathan F. and Tarassenko, Lionel},
+  booktitle     = {Advances in Neural Information Processing Systems},
+  year          = {2026},
+  eprint        = {2606.09605},
+  archivePrefix = {arXiv},
+}
+```
