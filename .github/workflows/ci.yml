@@ -38,3 +38,17 @@ jobs:
           enable-cache: true
       - name: Run tests
         run: uv run --group dev pytest -v
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          enable-cache: true
+      - run: uv build
+      - name: Test the built wheel
+        run: uv run --isolated --no-project --with dist/*.whl --with pytest pytest -v
